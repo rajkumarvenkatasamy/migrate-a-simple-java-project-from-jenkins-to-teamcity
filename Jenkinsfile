@@ -43,7 +43,7 @@ pipeline {
         // Sensitive environment variables (using credentials)
         // Note: Create these credentials in Jenkins before running
         // Or comment out if not yet configured
-        // DB_PASSWORD = credentials('database-password')
+        DB_PASSWORD = credentials('database-password')
         // API_KEY = credentials('api-key')
         // SONAR_TOKEN = credentials('sonar-token')
         // DEPLOY_SSH_KEY = credentials('deploy-ssh-key')
