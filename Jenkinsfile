@@ -34,19 +34,19 @@ pipeline {
     environment {
         // Non-sensitive environment variables
         APP_NAME = 'demo-spring-boot-app'
-        JAVA_HOME = tool 'JDK-21'
         GRADLE_OPTS = '-Dorg.gradle.daemon=false'
-        BUILD_TIMESTAMP = sh(script: "date '+%Y%m%d-%H%M%S'", returnStdout: true).trim()
         
         // Derived environment variable from parameter
         APP_ENVIRONMENT = "${params.BUILD_ENVIRONMENT}"
         APP_VERSION = "${params.BUILD_VERSION}"
         
         // Sensitive environment variables (using credentials)
-        DB_PASSWORD = credentials('database-password')
-        API_KEY = credentials('api-key')
-        SONAR_TOKEN = credentials('sonar-token')
-        DEPLOY_SSH_KEY = credentials('deploy-ssh-key')
+        // Note: Create these credentials in Jenkins before running
+        // Or comment out if not yet configured
+        // DB_PASSWORD = credentials('database-password')
+        // API_KEY = credentials('api-key')
+        // SONAR_TOKEN = credentials('sonar-token')
+        // DEPLOY_SSH_KEY = credentials('deploy-ssh-key')
     }
     
     options {
@@ -66,10 +66,15 @@ pipeline {
     stages {
         stage('Initialization') {
             steps {
+                script {
+                    // Set build timestamp
+                    env.BUILD_TIMESTAMP = sh(script: "date '+%Y%m%d-%H%M%S'", returnStdout: true).trim()
+                }
+                
                 echo '========== Build Initialization =========='
                 echo "Environment: ${APP_ENVIRONMENT}"
                 echo "Version: ${APP_VERSION}"
-                echo "Build Timestamp: ${BUILD_TIMESTAMP}"
+                echo "Build Timestamp: ${env.BUILD_TIMESTAMP}"
                 echo "Build Number: ${env.BUILD_NUMBER}"
                 echo "Deploy Server: ${params.DEPLOY_SERVER}"
                 
@@ -156,10 +161,11 @@ pipeline {
                     echo "SonarQube Token: [PROTECTED]"
                     
                     // Example SonarQube scan command (commented out)
+                    // Uncomment when credentials are configured
                     // sh """
                     //     ./gradlew sonarqube \
                     //         -Dsonar.host.url=https://sonarqube.example.com \
-                    //         -Dsonar.login=${SONAR_TOKEN} \
+                    //         -Dsonar.login=\${SONAR_TOKEN} \
                     //         -Dsonar.projectKey=${APP_NAME} \
                     //         -Dsonar.projectName=${APP_NAME} \
                     //         -Dsonar.projectVersion=${APP_VERSION}
@@ -213,12 +219,12 @@ pipeline {
                 
                 script {
                     echo "Building Docker image for ${APP_ENVIRONMENT} environment"
-                    echo "Image tag: ${APP_NAME}:${APP_VERSION}-${BUILD_TIMESTAMP}"
+                    echo "Image tag: ${APP_NAME}:${APP_VERSION}-${env.BUILD_TIMESTAMP}"
                     
                     // Example Docker build command (commented out)
                     // sh """
-                    //     docker build -t ${APP_NAME}:${APP_VERSION}-${BUILD_TIMESTAMP} .
-                    //     docker tag ${APP_NAME}:${APP_VERSION}-${BUILD_TIMESTAMP} ${APP_NAME}:latest
+                    //     docker build -t ${APP_NAME}:${APP_VERSION}-${env.BUILD_TIMESTAMP} .
+                    //     docker tag ${APP_NAME}:${APP_VERSION}-${env.BUILD_TIMESTAMP} ${APP_NAME}:latest
                     // """
                 }
             }
@@ -238,12 +244,13 @@ pipeline {
                     echo "Database Password: [PROTECTED]"
                     
                     // Example deployment commands (commented out)
+                    // Uncomment when credentials are configured
                     // sh """
-                    //     scp -i ${DEPLOY_SSH_KEY} \
+                    //     scp -i \${DEPLOY_SSH_KEY} \
                     //         build/libs/demo-${APP_VERSION}.jar \
                     //         deploy@${params.DEPLOY_SERVER}:/opt/apps/
                     //     
-                    //     ssh -i ${DEPLOY_SSH_KEY} \
+                    //     ssh -i \${DEPLOY_SSH_KEY} \
                     //         deploy@${params.DEPLOY_SERVER} \
                     //         'systemctl restart demo-app'
                     // """
@@ -272,44 +279,48 @@ pipeline {
     
     post {
         always {
-            echo '========== Pipeline Completed =========='
-            echo "Final Status: ${currentBuild.currentResult}"
-            
-            // Clean workspace
-            cleanWs()
+            script {
+                echo '========== Pipeline Completed =========='
+                echo "Final Status: ${currentBuild.currentResult}"
+                
+                // Clean workspace only if running on an agent
+                try {
+                    cleanWs()
+                } catch (Exception e) {
+                    echo "Unable to clean workspace: ${e.message}"
+                }
+            }
         }
         success {
-            echo '========== Build Successful =========='
-            
-            // Send success notification
             script {
-                echo "Build ${env.BUILD_NUMBER} completed successfully for ${APP_ENVIRONMENT}"
+                echo '========== Build Successful =========='
+                echo "Build ${env.BUILD_NUMBER} completed successfully"
                 
                 // Example: Send email or Slack notification
                 // emailext (
                 //     subject: "SUCCESS: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-                //     body: "Build successful for ${APP_ENVIRONMENT} environment",
+                //     body: "Build successful for ${params.BUILD_ENVIRONMENT} environment",
                 //     to: 'team@example.com'
                 // )
             }
         }
         failure {
-            echo '========== Build Failed =========='
-            
-            // Send failure notification
             script {
-                echo "Build ${env.BUILD_NUMBER} failed for ${APP_ENVIRONMENT}"
+                echo '========== Build Failed =========='
+                echo "Build ${env.BUILD_NUMBER} failed"
                 
                 // Example: Send email or Slack notification
                 // emailext (
                 //     subject: "FAILURE: ${env.JOB_NAME} - Build #${env.BUILD_NUMBER}",
-                //     body: "Build failed for ${APP_ENVIRONMENT} environment",
+                //     body: "Build failed for ${params.BUILD_ENVIRONMENT} environment",
                 //     to: 'team@example.com'
                 // )
             }
         }
         unstable {
-            echo '========== Build Unstable =========='
+            script {
+                echo '========== Build Unstable =========='
+            }
         }
     }
 }
