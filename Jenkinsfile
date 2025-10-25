@@ -109,6 +109,8 @@ pipeline {
             steps {
                 echo '========== Building Application =========='
                 
+                sh 'chmod +x gradlew'
+
                 // Clean and build
                 sh '''
                     ./gradlew clean build -x test \
@@ -128,6 +130,8 @@ pipeline {
             steps {
                 echo '========== Running Unit Tests =========='
                 
+                sh 'chmod +x gradlew'
+
                 sh '''
                     ./gradlew test \
                         -PtestProfile=test \
@@ -165,6 +169,7 @@ pipeline {
                     
                     // Example SonarQube scan command (commented out)
                     // Uncomment when credentials are configured
+                    // sh 'chmod +x gradlew'
                     // sh """
                     //     ./gradlew sonarqube \
                     //         -Dsonar.host.url=https://sonarqube.example.com \
@@ -181,6 +186,8 @@ pipeline {
             steps {
                 echo '========== Packaging Application =========='
                 
+                sh 'chmod +x gradlew'
+
                 sh '''
                     ./gradlew bootJar \
                         -Pversion=${APP_VERSION} \
@@ -205,6 +212,7 @@ pipeline {
                     echo "API Key: [PROTECTED]"
                     
                     // Example: OWASP Dependency Check or similar
+                    // sh 'chmod +x gradlew'
                     // sh './gradlew dependencyCheckAnalyze'
                 }
             }
