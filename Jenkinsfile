@@ -84,6 +84,9 @@ pipeline {
                     java -version
                 '''
                 
+                // Make gradlew executable (needed on Linux/Unix)
+                sh 'chmod +x gradlew'
+                
                 // Print Gradle version
                 sh './gradlew --version'
             }
