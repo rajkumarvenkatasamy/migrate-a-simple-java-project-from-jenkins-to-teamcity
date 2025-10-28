@@ -18,16 +18,6 @@ pipeline {
             defaultValue: true,
             description: 'Whether to run tests'
         )
-        booleanParam(
-            name: 'SKIP_SONAR',
-            defaultValue: false,
-            description: 'Skip SonarQube analysis'
-        )
-        string(
-            name: 'DEPLOY_SERVER',
-            defaultValue: 'server.example.com',
-            description: 'Target deployment server'
-        )
     }
     
     // Environment variables
@@ -45,8 +35,6 @@ pipeline {
         // Or comment out if not yet configured
         DB_PASSWORD = credentials('database-password')
         // API_KEY = credentials('api-key')
-        // SONAR_TOKEN = credentials('sonar-token')
-        // DEPLOY_SSH_KEY = credentials('deploy-ssh-key')
     }
     
     options {
@@ -65,18 +53,11 @@ pipeline {
     
     stages {
         stage('Initialization') {
-            steps {
-                script {
-                    // Set build timestamp
-                    env.BUILD_TIMESTAMP = sh(script: "date '+%Y%m%d-%H%M%S'", returnStdout: true).trim()
-                }
-                
+            steps {                
                 echo '========== Build Initialization =========='
                 echo "Environment: ${APP_ENVIRONMENT}"
                 echo "Version: ${APP_VERSION}"
-                echo "Build Timestamp: ${env.BUILD_TIMESTAMP}"
                 echo "Build Number: ${env.BUILD_NUMBER}"
-                echo "Deploy Server: ${params.DEPLOY_SERVER}"
                 
                 // Print Java version
                 sh '''
@@ -139,153 +120,8 @@ pipeline {
                         --console=plain
                 '''
             }
-            post {
-                always {
-                    // Publish test results
-                    junit '**/build/test-results/test/*.xml'
-                    
-                    // Publish test coverage report
-                    jacoco(
-                        execPattern: '**/build/jacoco/*.exec',
-                        classPattern: '**/build/classes',
-                        sourcePattern: '**/src/main/java'
-                    )
-                }
-            }
         }
-        
-        stage('Code Quality Analysis') {
-            when {
-                expression { params.SKIP_SONAR == false }
-            }
-            steps {
-                echo '========== Running Code Quality Analysis =========='
-                
-                // This is a placeholder for SonarQube analysis
-                // In a real scenario, you would use the SonarQube Scanner
-                script {
-                    echo "Running SonarQube analysis..."
-                    echo "SonarQube Token: [PROTECTED]"
-                    
-                    // Example SonarQube scan command (commented out)
-                    // Uncomment when credentials are configured
-                    // sh 'chmod +x gradlew'
-                    // sh """
-                    //     ./gradlew sonarqube \
-                    //         -Dsonar.host.url=https://sonarqube.example.com \
-                    //         -Dsonar.login=\${SONAR_TOKEN} \
-                    //         -Dsonar.projectKey=${APP_NAME} \
-                    //         -Dsonar.projectName=${APP_NAME} \
-                    //         -Dsonar.projectVersion=${APP_VERSION}
-                    // """
-                }
-            }
-        }
-        
-        stage('Package') {
-            steps {
-                echo '========== Packaging Application =========='
-                
-                sh 'chmod +x gradlew'
-
-                sh '''
-                    ./gradlew bootJar \
-                        -Pversion=${APP_VERSION} \
-                        --no-daemon \
-                        --console=plain
-                '''
-                
-                // Archive artifacts
-                archiveArtifacts artifacts: '**/build/libs/*.jar', 
-                                fingerprint: true,
-                                allowEmptyArchive: false
-            }
-        }
-        
-        stage('Security Scan') {
-            steps {
-                echo '========== Running Security Scan =========='
-                
-                // Placeholder for security scanning
-                script {
-                    echo "Performing security scan..."
-                    echo "API Key: [PROTECTED]"
-                    
-                    // Example: OWASP Dependency Check or similar
-                    // sh 'chmod +x gradlew'
-                    // sh './gradlew dependencyCheckAnalyze'
-                }
-            }
-        }
-        
-        stage('Docker Build') {
-            when {
-                expression { 
-                    params.BUILD_ENVIRONMENT == 'staging' || 
-                    params.BUILD_ENVIRONMENT == 'production' 
-                }
-            }
-            steps {
-                echo '========== Building Docker Image =========='
-                
-                script {
-                    echo "Building Docker image for ${APP_ENVIRONMENT} environment"
-                    echo "Image tag: ${APP_NAME}:${APP_VERSION}-${env.BUILD_TIMESTAMP}"
-                    
-                    // Example Docker build command (commented out)
-                    // sh """
-                    //     docker build -t ${APP_NAME}:${APP_VERSION}-${env.BUILD_TIMESTAMP} .
-                    //     docker tag ${APP_NAME}:${APP_VERSION}-${env.BUILD_TIMESTAMP} ${APP_NAME}:latest
-                    // """
-                }
-            }
-        }
-        
-        stage('Deploy to Environment') {
-            when {
-                expression { params.BUILD_ENVIRONMENT != 'development' }
-            }
-            steps {
-                echo '========== Deploying Application =========='
-                
-                script {
-                    echo "Deploying to ${APP_ENVIRONMENT} environment"
-                    echo "Target server: ${params.DEPLOY_SERVER}"
-                    echo "Using SSH Key: [PROTECTED]"
-                    echo "Database Password: [PROTECTED]"
-                    
-                    // Example deployment commands (commented out)
-                    // Uncomment when credentials are configured
-                    // sh """
-                    //     scp -i \${DEPLOY_SSH_KEY} \
-                    //         build/libs/demo-${APP_VERSION}.jar \
-                    //         deploy@${params.DEPLOY_SERVER}:/opt/apps/
-                    //     
-                    //     ssh -i \${DEPLOY_SSH_KEY} \
-                    //         deploy@${params.DEPLOY_SERVER} \
-                    //         'systemctl restart demo-app'
-                    // """
-                }
-            }
-        }
-        
-        stage('Smoke Tests') {
-            when {
-                expression { params.BUILD_ENVIRONMENT != 'development' }
-            }
-            steps {
-                echo '========== Running Smoke Tests =========='
-                
-                script {
-                    echo "Running smoke tests against ${params.DEPLOY_SERVER}"
-                    
-                    // Example smoke test
-                    // sh """
-                    //     curl -f http://${params.DEPLOY_SERVER}:8080/actuator/health || exit 1
-                    // """
-                }
-            }
-        }
+                         
     }
     
     post {
