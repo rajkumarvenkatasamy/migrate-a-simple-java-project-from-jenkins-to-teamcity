@@ -57,8 +57,9 @@ object MigrateASimpleJavaProjectFromJenkinsToTeamcity_Build : BuildType({
             id = "simpleRunner"
             scriptContent = """
                 echo "========== Build Initialization =========="
-                echo "Environment: ${'$'}{BUILD_ENVIRONMENT}"
-                echo "Version: ${'$'}{BUILD_VERSION}"
+                echo "Environment: %BUILD_ENVIRONMENT%"
+                echo "Version: %BUILD_VERSION%"
+                echo "App Name: ${'$'}APP_NAME"
                 
                 # Print Java version
                 echo "Java Version:"
